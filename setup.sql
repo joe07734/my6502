@@ -1,4 +1,5 @@
--- don't forget to call create_machine() afterwards or you'll have no CPU or RAM
+-- cat setup.sql|mysql -u root
+-- don't forget to call create_machine() afterwards or you'll have no CPU or RAM!
 
 drop database if exists my6502;
 create database my6502 character set ascii;
@@ -19,19 +20,30 @@ create table cpu (
     pc smallint unsigned not null default 0
 ) engine = innodb;
 
-create table screen (
-    screen text character set ascii not null
+
+create table stats (
+    instructions integer unsigned not null default 0
 ) engine = innodb;
+
+create table text_screen (
+    chars text not null
+) engine = innodb;
+
 
 delimiter $$
 
 create trigger ram_after_update after update on ram
 for each row begin
-    declare ix integer;
-    if NEW.address >= 0x400 and NEW.address < 0x800 then  -- text screen
+    declare ix int;
+    declare v int;
+    declare ch text;
+    if NEW.address >= 0x400 and NEW.address < 0x428 then  -- text screen DEBUG FIRST LINE ONLY
         set ix = NEW.address - 0x400;
         set ix = ix + 1;  -- DEBUG skip over newline
-        update screen set screen = concat(left(screen, ix), char(NEW.value), substring(screen, ix+2));
+        set v = NEW.value & 0x7F;
+        set ch = char(if(v >= 32 and v <= 95, v,
+            if(v < 32, v + 64, v - 64)));
+        update text_screen set chars = concat(left(chars, ix), ch, substring(chars, ix+2));
     end if;
 end;
 
@@ -39,6 +51,9 @@ drop procedure if exists create_machine;
 create procedure create_machine ()
 begin
     declare a int;
+
+    delete from text_screen;
+    insert into text_screen (chars) values (repeat(concat("\n", repeat("?", 40)), 24));  -- for the "\n"
 
     delete from ram;
     set a = 0;
@@ -54,8 +69,8 @@ begin
     delete from cpu;
     insert into cpu set pc = 0x300;
 
-    delete from screen;
-    insert into screen (screen) values (repeat(concat("\n", repeat(" ", 40)), 24));
+    delete from stats;
+    insert into stats set instructions = 0;
 
     call hard_reset();
 end;
@@ -64,7 +79,14 @@ drop procedure if exists hard_reset;
 create procedure hard_reset ()
 begin
     update ram set value = 0xFF;
+    call soft_reset();
+end;
+
+drop procedure if exists soft_reset;
+create procedure soft_reset ()
+begin
     update cpu set a = 0xFF, x = 0xFF, y = 0xFF, s = 0xFF, p = 0x20, pc = 0x0300;
+    update stats set instructions = 0;
 end;
 
 $$
