@@ -174,7 +174,7 @@ begin
         when 2 then  -- zero page,X
             select ram.value, ram.address into byte, ea from cpu
                 join ram as op_ram on op_ram.address = cpu.pc + 1
-                join ram on ram.address = op_ram.value + cpu.x;
+                join ram on ram.address = op_ram.value + cpu.x & 0xFF;
             set pc_change = 2;
 
         when 3 then  -- absolute
@@ -188,14 +188,14 @@ begin
             select ram.value, ram.address into byte, ea from cpu
                 join ram as op_ram_lo on op_ram_lo.address = cpu.pc + 1
                 join ram as op_ram_hi on op_ram_hi.address = cpu.pc + 2
-                join ram on ram.address = (op_ram_hi.value << 8) + op_ram_lo.value + cpu.x;
+                join ram on ram.address = (op_ram_hi.value << 8) + op_ram_lo.value + cpu.x & 0xFFFF;
             set pc_change = 3;
 
         when 5 then  -- absolute,Y
             select ram.value, ram.address into byte, ea from cpu
                 join ram as op_ram_lo on op_ram_lo.address = cpu.pc + 1
                 join ram as op_ram_hi on op_ram_hi.address = cpu.pc + 2
-                join ram on ram.address = (op_ram_hi.value << 8) + op_ram_lo.value + cpu.y;
+                join ram on ram.address = (op_ram_hi.value << 8) + op_ram_lo.value + cpu.y & 0xFFFF;
             set pc_change = 3;
 
         when 6 then  -- (indirect,X)
@@ -211,13 +211,13 @@ begin
                 join ram as op_ram on op_ram.address = cpu.pc + 1
                 join ram as ind_ram_lo on ind_ram_lo.address = op_ram.value
                 join ram as ind_ram_hi on ind_ram_hi.address = op_ram.value + 1
-                join ram on ram.address = (ind_ram_hi.value << 8) + ind_ram_lo.value + cpu.y;
+                join ram on ram.address = (ind_ram_hi.value << 8) + ind_ram_lo.value + cpu.y & 0xFFFF;
             set pc_change = 2;
 
         when 8 then  -- zero page,Y
             select ram.value, ram.address into byte, ea from cpu
                 join ram as op_ram on op_ram.address = cpu.pc + 1
-                join ram on ram.address = op_ram.value + cpu.y;
+                join ram on ram.address = op_ram.value + cpu.y & 0xFF;
             set pc_change = 2;
 
     end case;

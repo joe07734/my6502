@@ -22,7 +22,9 @@ create table cpu (
 
 
 create table stats (
-    instructions integer unsigned not null default 0
+    instructions integer unsigned not null default 0,
+    message text,
+    halt integer unsigned not null default 0
 ) engine = innodb;
 
 create table text_screen (
@@ -86,7 +88,7 @@ drop procedure if exists soft_reset;
 create procedure soft_reset ()
 begin
     update cpu set a = 0xFF, x = 0xFF, y = 0xFF, s = 0xFF, p = 0x20, pc = 0x0300;
-    update stats set instructions = 0;
+    update stats set instructions = 0, message = null;
 end;
 
 $$
